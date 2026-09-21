@@ -49,9 +49,6 @@ jobs:
             $path = Join-Path $root $relative
             $content = Get-Content $path -Raw
 
-            # Fragtality's local development setup creates/updates packages through
-            # PreBuild/PostBuild scripts against ..\CFIT\PackageRepo. In CI we create
-            # the packages explicitly below, so remove those local-only hooks.
             $content = [regex]::Replace(
               $content,
               '(?s)\s*<Target Name="PreBuild".*?</Target>',
@@ -63,7 +60,6 @@ jobs:
               ''
             )
 
-            # We only need the .NET 10 assemblies for Any2GSX.
             $content = $content.Replace(
               '<TargetFrameworks>net48-windows10.0.17763.0;net10.0-windows10.0.17763.0</TargetFrameworks>',
               '<TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>'
@@ -72,6 +68,32 @@ jobs:
             Set-Content -Path $path -Value $content -Encoding utf8
           }
 
+      - name: Create CI NuGet configuration
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $feed = Join-Path $env:GITHUB_WORKSPACE '_deps\packages'
+          $config = Join-Path $env:GITHUB_WORKSPACE '_deps\NuGet.config'
+
+          New-Item -ItemType Directory -Force -Path $feed | Out-Null
+
+          $xml = @"
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="local-cfit" value="$feed" />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
+            </packageSources>
+          </configuration>
+          "@
+
+          $xml | Set-Content -Path $config -Encoding utf8
+
+          Write-Host "NuGet configuration:"
+          Get-Content $config
+
       - name: Build local CFIT NuGet feed
         shell: pwsh
         run: |
@@ -79,9 +101,7 @@ jobs:
 
           $root = Join-Path $env:GITHUB_WORKSPACE '_deps\CFIT'
           $feed = Join-Path $env:GITHUB_WORKSPACE '_deps\packages'
-          New-Item -ItemType Directory -Force -Path $feed | Out-Null
-
-          $nuget = 'https://api.nuget.org/v3/index.json'
+          $config = Join-Path $env:GITHUB_WORKSPACE '_deps\NuGet.config'
 
           $packages = @(
             @{
@@ -104,18 +124,16 @@ jobs:
 
           foreach ($package in $packages) {
             $project = Join-Path $root $package.Project
-            Write-Host "Packing $($package.Project) as $($package.Version)"
 
-            dotnet restore $project `
-              --source $feed `
-              --source $nuget
-
+            Write-Host "Restoring $($package.Project)"
+            dotnet restore "$project" --configfile "$config"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-            dotnet pack $project `
+            Write-Host "Packing $($package.Project) as $($package.Version)"
+            dotnet pack "$project" `
               --configuration Release `
               --no-restore `
-              --output $feed `
+              --output "$feed" `
               -p:Version=$($package.Version)
 
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -127,18 +145,23 @@ jobs:
       - name: Restore PMDG 737 plugin
         shell: pwsh
         run: |
-          $feed = Join-Path $env:GITHUB_WORKSPACE '_deps\packages'
+          $ErrorActionPreference = 'Stop'
+          $config = Join-Path $env:GITHUB_WORKSPACE '_deps\NuGet.config'
 
-          dotnet restore Pmdg737Interface/Pmdg737Interface.csproj `
-            --source $feed `
-            --source https://api.nuget.org/v3/index.json
+          dotnet restore "Pmdg737Interface/Pmdg737Interface.csproj" --configfile "$config"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build PMDG 737 plugin
-        run: >
-          dotnet build Pmdg737Interface/Pmdg737Interface.csproj
-          --configuration Release
-          --no-restore
-          -p:SkipPluginPackaging=true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          dotnet build "Pmdg737Interface/Pmdg737Interface.csproj" `
+            --configuration Release `
+            --no-restore `
+            -p:SkipPluginPackaging=true
+
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload validation build
         uses: actions/upload-artifact@v4
