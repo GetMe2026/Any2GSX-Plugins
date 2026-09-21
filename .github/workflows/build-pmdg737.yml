@@ -17,16 +17,121 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Any2GSX plugins
         uses: actions/checkout@v4
+
+      - name: Checkout CFIT sources
+        uses: actions/checkout@v4
+        with:
+          repository: Fragtality/CFIT
+          ref: master
+          path: _deps/CFIT
 
       - name: Set up .NET 10
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
 
+      - name: Prepare CFIT projects for CI packaging
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:GITHUB_WORKSPACE '_deps\CFIT'
+
+          $projects = @(
+            'AppLogger\AppLogger.csproj',
+            'AppTools\AppTools.csproj',
+            'SimConnectLib\SimConnectLib.csproj',
+            'AppFramework\AppFramework.csproj'
+          )
+
+          foreach ($relative in $projects) {
+            $path = Join-Path $root $relative
+            $content = Get-Content $path -Raw
+
+            # Fragtality's local development setup creates/updates packages through
+            # PreBuild/PostBuild scripts against ..\CFIT\PackageRepo. In CI we create
+            # the packages explicitly below, so remove those local-only hooks.
+            $content = [regex]::Replace(
+              $content,
+              '(?s)\s*<Target Name="PreBuild".*?</Target>',
+              ''
+            )
+            $content = [regex]::Replace(
+              $content,
+              '(?s)\s*<Target Name="PostBuild".*?</Target>',
+              ''
+            )
+
+            # We only need the .NET 10 assemblies for Any2GSX.
+            $content = $content.Replace(
+              '<TargetFrameworks>net48-windows10.0.17763.0;net10.0-windows10.0.17763.0</TargetFrameworks>',
+              '<TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>'
+            )
+
+            Set-Content -Path $path -Value $content -Encoding utf8
+          }
+
+      - name: Build local CFIT NuGet feed
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $root = Join-Path $env:GITHUB_WORKSPACE '_deps\CFIT'
+          $feed = Join-Path $env:GITHUB_WORKSPACE '_deps\packages'
+          New-Item -ItemType Directory -Force -Path $feed | Out-Null
+
+          $nuget = 'https://api.nuget.org/v3/index.json'
+
+          $packages = @(
+            @{
+              Project = 'AppLogger\AppLogger.csproj'
+              Version = '2026.255.17.3105'
+            },
+            @{
+              Project = 'AppTools\AppTools.csproj'
+              Version = '2026.255.17.3122'
+            },
+            @{
+              Project = 'SimConnectLib\SimConnectLib.csproj'
+              Version = '2026.255.17.3143'
+            },
+            @{
+              Project = 'AppFramework\AppFramework.csproj'
+              Version = '2026.255.17.3154'
+            }
+          )
+
+          foreach ($package in $packages) {
+            $project = Join-Path $root $package.Project
+            Write-Host "Packing $($package.Project) as $($package.Version)"
+
+            dotnet restore $project `
+              --source $feed `
+              --source $nuget
+
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+            dotnet pack $project `
+              --configuration Release `
+              --no-restore `
+              --output $feed `
+              -p:Version=$($package.Version)
+
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+          Write-Host 'Local CFIT packages:'
+          Get-ChildItem $feed | Select-Object Name
+
       - name: Restore PMDG 737 plugin
-        run: dotnet restore Pmdg737Interface/Pmdg737Interface.csproj
+        shell: pwsh
+        run: |
+          $feed = Join-Path $env:GITHUB_WORKSPACE '_deps\packages'
+
+          dotnet restore Pmdg737Interface/Pmdg737Interface.csproj `
+            --source $feed `
+            --source https://api.nuget.org/v3/index.json
 
       - name: Build PMDG 737 plugin
         run: >
