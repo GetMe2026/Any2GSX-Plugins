@@ -1,0 +1,7 @@
+JSON OK: manifest.json
+JSON OK: PMDG.737.json
+XML OK: Pmdg737Interface.csproj
+Safety defaults OK: no advertised native writes/automation
+No PMDG_NG3_SDK.h included
+C# structural checks OK
+Interop offsets/event constants present

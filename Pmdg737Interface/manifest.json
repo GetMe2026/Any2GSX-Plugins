@@ -1,0 +1,82 @@
+{
+  "Id": "PMDG.B737",
+  "SettingId": "PMDG.737.Native",
+  "Type": 0,
+  "Filename": "Pmdg737Interface.dll",
+  "ChannelFile": "PMDG.737.json",
+  "Aircraft": "PMDG B737 NG3 (All Variants)",
+  "Author": "GetMe2026",
+  "Url": "https://github.com/GetMe2026/Any2GSX-Plugins",
+  "VersionPlugin": "0.1.0",
+  "VersionApp": "0.4.14",
+  "Capabilities": {
+    "HasFobSaveRestore": false,
+    "FuelSync": 1,
+    "CanSetPayload": false,
+    "PayloadSync": 1,
+    "DoorHandling": 1,
+    "DoorsSynced": 1,
+    "DoorsCloseAll": false,
+    "GroundEquipmentHandling": 1,
+    "HasSmartButton": false,
+    "VolumeControl": false,
+    "CockpitNotifications": 0
+  },
+  "AircraftProfileEntries": [],
+  "Settings": [
+    {
+      "Key": "PMDG.737.Native.Option.EnableExperimentalWrites",
+      "Type": 1,
+      "DefaultValue": false,
+      "Description": "Enable experimental aircraft writes",
+      "Tooltip": "OFF by default. When enabled, the native plugin may send PMDG door events from GSX callbacks. Leave disabled until read-only state monitoring has been validated."
+    },
+    {
+      "Key": "PMDG.737.Native.Option.StateLogging",
+      "Type": 1,
+      "DefaultValue": true,
+      "Description": "Log PMDG 737 state changes",
+      "Tooltip": "Logs model, power, APU, lights, parking brake and door annunciator changes for validation."
+    }
+  ],
+  "InstallUsageNotes": "FOUNDATION / VALIDATION BUILD.\\r\\nAdd [SDK] and EnableDataBroadcast=1 to 737NG3_Options.ini, then fully restart MSFS.\\r\\nExperimental aircraft writes are OFF by default and this manifest advertises no active door/equipment sync.\\r\\nUse this build first to validate ClientData and raw state logging.\\r\\nThe existing generic PMDG 737 profile is intentionally not modified.",
+  "PluginDefaultProfile": {
+    "PluginId": "PMDG.B737",
+    "ChannelFileId": "PMDG.737",
+    "ProfileMatches": [
+      {
+        "MatchData": 4,
+        "MatchOperation": 3,
+        "MatchString": "PMDG 737"
+      }
+    ],
+    "RunAutomationService": false,
+    "RunAudioService": false,
+    "PluginSettings": {
+      "PMDG.737.Native.Option.EnableExperimentalWrites": false,
+      "PMDG.737.Native.Option.StateLogging": true,
+      "Generic.Var.Engine1.Name": "ENG COMBUSTION:1",
+      "Generic.Var.Engine1.Unit": "Bool",
+      "Generic.Var.Engine2.Name": "ENG COMBUSTION:2",
+      "Generic.Var.Engine2.Unit": "Bool",
+      "Generic.Var.PowerAvionic.Name": "L:BatteryFreq",
+      "Generic.Var.PowerAvionic.Unit": "Bool",
+      "Generic.Var.ExtAvail.Name": "L:7X7X_Ground_Power_Light_NotInUse",
+      "Generic.Var.ExtAvail.Unit": "Bool",
+      "Generic.Var.ExtConn.Name": "L:7X7X_Ground_Power_Light_Connected",
+      "Generic.Var.ExtConn.Unit": "Bool",
+      "Generic.Var.ApuRunning.Name": "L:APU",
+      "Generic.Var.ApuRunning.Unit": "Bool",
+      "Generic.Var.ApuBleedOn.Name": "L:APUBleed_InUse",
+      "Generic.Var.ApuBleedOn.Unit": "Bool",
+      "Generic.Var.LightNav.Name": "LIGHT NAV",
+      "Generic.Var.LightNav.Unit": "Bool",
+      "Generic.Var.LightBeacon.Name": "LIGHT BEACON",
+      "Generic.Var.LightBeacon.Unit": "Bool",
+      "Generic.Var.ParkBrake.Name": "BRAKE PARKING POSITION",
+      "Generic.Var.ParkBrake.Unit": "Bool",
+      "Generic.Option.Aircraft.RefuelStair": false,
+      "Generic.Option.Aircraft.GsxProgFuel": false
+    }
+  }
+}
