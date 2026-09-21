@@ -173,8 +173,11 @@ namespace Pmdg737Interface
                     }
                 }
 
-                if (Aircraft.RearDoorAuto)
+                if (Aircraft.RearDoorAuto
+                    && (Aircraft.IntegratedAirstairAuto || RearStairIsApproachingOrConnected()))
+                {
                     await EnsureRearDoorOpen("prepare-passenger-route");
+                }
             }
             finally
             {
@@ -315,6 +318,7 @@ namespace Pmdg737Interface
 
                 await Doors[Pmdg737DoorId.FwdL].SetOpen(true);
             }
+
             // Intentionally do not force-close 1L on transitional GSX jetway states.
             // Final-loadsheet / pushback door closure owns that boundary.
         }
