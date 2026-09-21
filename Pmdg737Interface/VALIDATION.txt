@@ -1,7 +1,49 @@
-JSON OK: manifest.json
-JSON OK: PMDG.737.json
-XML OK: Pmdg737Interface.csproj
-Safety defaults OK: no advertised native writes/automation
-No PMDG_NG3_SDK.h included
-C# structural checks OK
-Interop offsets/event constants present
+PMDG B737 native v0.2.0 beta
+================================
+
+Source/architecture:
+- Existing Pmdg737 generic profile left untouched
+- Existing PMDG.738.RYR Lua/profile left untouched
+- PMDG 777 native plugin patterns reviewed
+- PMDG NG3 SDK ClientData/event definitions used as source of truth
+- No PMDG_NG3_SDK.h redistributed
+
+Native state:
+- NG3 ClientData interop remains 916 bytes
+- model, parking brake, electrical buses, ground-power availability
+- APU bleed, position lights, beacon, door annunciators
+
+Door integration:
+- plugin door capabilities enabled
+- L1/L2/R1/R2 mappings
+- FWD/AFT lower cargo mappings
+- loader callbacks
+- jetway callbacks
+- stair service/operation callbacks
+- front/rear stair vehicle callbacks
+- serialized target-safe toggle writes
+- progress guard from established PMDG door LVars
+- integrated 1L airstair sequencing
+- pushback stale-callback boundary
+
+Profiles:
+- PMDG.737.Native added
+- PMDG.738.Ryanair.Native added
+- Ryanair V3 service/tug logic retained
+- old PMDG.738.RYR plugin-specific settings removed from native profile
+
+Known beta limitation:
+- freighter main cargo event exists, but published NG3 ClientData has no matching
+  main-cargo state field; blind toggling is intentionally disabled.
+
+Required runtime validation remains:
+- cold & dark
+- turnaround
+- jetway
+- rear boarding
+- service doors
+- cargo loaders
+- final close
+- pushback
+- arrival
+- second 737 passenger variant

@@ -1,20 +1,24 @@
-# Implementation notes
+# Implementation notes — v0.2.0 beta
 
-## Isolation
+## Isolation and fallbacks
 
-The new code lives entirely under `Pmdg737Interface/`.
+All native code remains under `Pmdg737Interface/`.
 
-No existing PMDG 737 generic profile is included or changed in this package.
+The existing repository files under `Pmdg737/` are intentionally not modified.
+An installed `PMDG.738.RYR` Lua plugin/profile is also not replaced. This gives
+users a clean fallback while the native plugin is beta-tested.
 
 ## ClientData
 
-The native data area is `PMDG_NG3_Data`.
+The native PMDG data area is `PMDG_NG3_Data`.
 
-The interop struct is intentionally a minimal `LayoutKind.Explicit` view with an explicit native size instead of a copy of the full PMDG SDK header. Only fields used by the initial monitoring layer are declared.
+`Pmdg737Sdk.cs` keeps a minimal `LayoutKind.Explicit` view with native size 916
+bytes. It declares only fields actually used by this plugin. The PMDG SDK header
+itself is not redistributed.
 
-## Door events prepared but inactive by default
+## Door events
 
-Prepared event offsets:
+PMDG NG3 custom shortcut event offsets used:
 
 - FWD L: 14005
 - FWD R: 14006
@@ -26,26 +30,62 @@ Prepared event offsets:
 - equipment hatch: 14016
 - airstair: 14017
 
-The event code is converted to a SimConnect custom event using base `69632`.
+All are based at event ID 69632 and use the PMDG left-single parameter.
 
-These writes are guarded by `EnableExperimentalWrites=false`.
+## Target-safe toggle strategy
 
-## Why door states are not treated like the 777
+PMDG door custom events are toggles. Sending the same event twice while GSX emits
+overlapping callbacks can undo the first command.
 
-The 777 exposes a multi-state door array with explicit OPEN/CLOSED/ARMED/OPENING/CLOSING values.
+v0.2 therefore serializes each door independently with `SemaphoreSlim`, checks
+the current target state before writing, and waits for a stable target after one
+event. The established PMDG door LVars from the existing Ryanair Lua plugin are
+used only as progress guards (0..100) so moving doors are not reversed.
 
-The NG3 data used here exposes individual door annunciator booleans. The foundation therefore only reports an `open indicated / not open indicated` condition and deliberately avoids inventing an opening/closing state.
+The authoritative aircraft status still comes from NG3 ClientData where the SDK
+provides it.
 
-## Next phase after runtime validation
+## GSX callbacks
 
-After read-only validation:
+The native layer implements:
 
-1. test one controlled L1 toggle;
-2. test L2/rear-stair behavior;
-3. validate GSX passenger-door slot mapping;
-4. enable jetway/stair callbacks selectively;
-5. validate cargo loader mapping;
-6. only then advertise plugin door capabilities in the manifest;
-7. create a copy of the Ryanair profile that uses `PluginId=PMDG.B737`.
+- `OnDoorTrigger`
+- `OnLoaderAttached`
+- `OnJetwayStateChange`
+- `OnStairStateChange`
+- `OnStairOperationChange`
+- `OnStairVehicleChange`
+- `DoorsAllClose`
+- `SetCargoDoors`
+- `OnAutomationStateChange`
 
-The current Ryanair profile remains the fallback throughout.
+GSX `*_TOGGLE` door variables are treated as pulse triggers, matching the PMDG
+777 plugin: only the positive pulse is acted on, and the target is derived from
+the current aircraft state.
+
+## Ryanair logic migrated from PMDG.738.RYR v0.2.5
+
+The native Ryanair profile retains the service/SOP choices while aircraft-specific
+mechanics move into C#:
+
+- integrated 1L airstair;
+- rear GSX stair -> 2L;
+- serialized rear-door commands;
+- stairs-at-jetway preference;
+- physical jetway safety override;
+- late stair callbacks blocked after Departure;
+- final/pushback door closure;
+- existing V3 service/tug configuration.
+
+## Deliberate limitation
+
+The NG3 SDK exposes `EVT_DOOR_CARGO_MAIN`, but the published ClientData structure
+does not expose a corresponding cargo-main state/annunciator. A toggle without a
+known current state is not target-safe, so v0.2 does not automatically operate
+the freighter main cargo door.
+
+## Release state
+
+This is feature-complete for the intended v0.2 door/stair/jetway scope, but still
+beta until the runtime validation matrix in `README_TESTING.md` has been executed.
+

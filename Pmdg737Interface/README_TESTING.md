@@ -1,25 +1,22 @@
-# PMDG B737 native plugin foundation
+# PMDG B737 native plugin — v0.2.0 beta
 
-This folder is intended to be added to the repository root as:
+Native PMDG 737 NG3 integration for Any2GSX.
 
-`Pmdg737Interface/`
+This project deliberately leaves the existing `Pmdg737/PMDG.737-Profile.json`
+and any installed `PMDG.738.RYR` Lua profile untouched. They remain fallback options.
 
-It does **not** replace or modify the existing `Pmdg737/PMDG.737-Profile.json`.
+## Architecture
 
-## Safety model
+The plugin follows the same separation used by the native PMDG 777 integration:
 
-Version `0.1.0` is deliberately conservative:
+- `Pmdg737Module` — PMDG NG3 ClientData transport.
+- `Pmdg737Aircraft` — Any2GSX aircraft interface and state mapping.
+- `Pmdg737DoorManager` — GSX door/stair/jetway/loader orchestration.
+- `Pmdg737Door` — serialized target-safe PMDG door event handling.
+- `Profiles/PMDG.737.Native-Profile-IMPORT.json` — general PMDG 737 profile.
+- `Profiles/PMDG.738.Ryanair.Native-Profile-IMPORT.json` — Ryanair-specific SOP profile.
 
-- PMDG NG3 ClientData monitoring is active.
-- Model/variant detection is active.
-- Parking-brake, electrical, APU, light and door-annunciator monitoring is active.
-- GSX stair-state monitoring is active.
-- Door/loader/jetway/stair callback interfaces are implemented.
-- `EnableExperimentalWrites` defaults to **false**.
-- The manifest advertises `ManualNone` for doors, fuel, payload and ground equipment.
-- The default native profile has `RunAutomationService=false`.
-
-Therefore installing/building this foundation should not start native PMDG door automation by itself.
+The aircraft plugin owns PMDG-specific mechanics. Profiles own service/SOP choices.
 
 ## Prerequisite
 
@@ -30,54 +27,74 @@ In `737NG3_Options.ini`:
 EnableDataBroadcast=1
 ```
 
-Fully restart MSFS after changing the option.
+Fully restart MSFS after changing this option.
 
-## First runtime validation
+## v0.2 door/state integration
 
-Keep experimental writes OFF.
+Implemented:
 
-Load the PMDG 737 and inspect the Any2GSX log. A successful connection should produce a line similar to:
+- PMDG NG3 ClientData model detection and state monitoring.
+- Parking brake, power buses, ground-power availability, APU bleed, position lights and beacon.
+- PMDG L1 / R1 / L2 / R2 target-safe door control.
+- Forward/aft lower cargo doors.
+- Equipment hatch closure during departure cleanup.
+- PMDG integrated 1L airstair.
+- GSX door trigger callbacks.
+- GSX cargo-loader callbacks.
+- GSX jetway callbacks.
+- GSX stair service and operation callbacks.
+- Per-vehicle front/rear stair callbacks.
+- Serialized door writes to prevent duplicate PMDG toggle events.
+- Door progress guard using the same PMDG LVars proven by the existing Ryanair Lua integration.
+- Pushback boundary that prevents stale rear-stair callbacks from reopening 2L.
+- Ryanair mode: integrated front airstair + rear GSX stair, including jetway-stand preference.
+- Active-jetway safety: integrated airstair retracts before 1L is used with the jetway.
 
-```text
-Receiving PMDG 737 NG3 ClientData - model 5 (737-800)
-```
+## Important beta limitation
 
-and then a monitor snapshot containing:
+The published NG3 ClientData structure exposes a custom event for the freighter main
+cargo door, but no corresponding cargo-main state/annunciator. v0.2 therefore does
+**not** blindly toggle that door. Forward/aft lower cargo doors are fully handled.
 
-```text
-PB=
-GndAvail=
-GndSw=
-APUsel=
-APUegt=
-APUbleed=
-POS=
-BCN=
-L1=
-R1=
-L2=
-R2=
-CgoF=
-CgoA=
-Airstair=
-```
+Fuel/payload synchronization is also intentionally not advertised yet; this version
+targets the aircraft-state, door, stair, jetway and loader integration first.
 
-Validate in this order:
+## Profiles
 
-1. parking brake set/released;
-2. beacon on/off;
-3. position lights;
-4. ground power available/selected;
-5. L1 manually open/close;
-6. L2 manually open/close;
-7. R1/R2 service doors;
-8. forward/aft cargo doors;
-9. front/rear GSX stair states.
+### PMDG.737.Native
 
-Only after these values are proven should `EnableExperimentalWrites` be enabled for controlled door-event tests.
+General PMDG 737 profile:
 
-## Build note
+- native aircraft plugin;
+- normal jetway behavior;
+- native passenger/service/cargo door handling;
+- native rear-stair/2L synchronization;
+- no forced Ryanair stairs-at-jetway behavior.
 
-This project follows the current `Pmdg777Interface` target/package versions and references the existing SimConnect DLL from that sibling project.
+### PMDG.738.Ryanair.Native
 
-A real .NET build has **not** been executed in the ChatGPT environment because the required .NET/Windows/SimConnect toolchain is unavailable there. JSON/XML/static checks were run when this package was generated.
+Based directly on the established `PMDG.738.Ryanair.V3` service flow.
+
+It keeps the proven Ryanair choices while moving aircraft mechanics into the native plugin:
+
+- PMDG integrated front airstair;
+- GSX rear stair with 2L synchronization;
+- stairs preferred at jetway-equipped stands;
+- jetway physical-connection safety override;
+- pushback-safe closure boundary;
+- existing V3 departure-services / tug logic retained.
+
+## Validation matrix before calling 1.0 stable
+
+1. 737-800 cold & dark, remote stand.
+2. 737-800 turnaround, remote stand.
+3. 737-800 jetway stand.
+4. L1/L2 rear boarding.
+5. R1/R2 catering/service-door callbacks.
+6. forward/aft cargo loader attach/detach.
+7. final-loadsheet close-all.
+8. automatic pushback with tug already attached.
+9. arrival/deboarding and turnaround.
+10. at least one additional PMDG 737 passenger variant.
+
+A successful compile is not a substitute for those runtime checks.

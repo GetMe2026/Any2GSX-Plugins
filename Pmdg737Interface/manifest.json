@@ -7,16 +7,16 @@
   "Aircraft": "PMDG B737 NG3 (All Variants)",
   "Author": "GetMe2026",
   "Url": "https://github.com/GetMe2026/Any2GSX-Plugins",
-  "VersionPlugin": "0.1.0",
+  "VersionPlugin": "0.2.0",
   "VersionApp": "0.4.14",
   "Capabilities": {
     "HasFobSaveRestore": false,
     "FuelSync": 1,
     "CanSetPayload": false,
     "PayloadSync": 1,
-    "DoorHandling": 1,
-    "DoorsSynced": 1,
-    "DoorsCloseAll": false,
+    "DoorHandling": 10,
+    "DoorsSynced": 30,
+    "DoorsCloseAll": true,
     "GroundEquipmentHandling": 1,
     "HasSmartButton": false,
     "VolumeControl": false,
@@ -28,53 +28,115 @@
       "Key": "PMDG.737.Native.Option.EnableExperimentalWrites",
       "Type": 1,
       "DefaultValue": false,
-      "Description": "Enable experimental aircraft writes",
-      "Tooltip": "OFF by default. When enabled, the native plugin may send PMDG door events from GSX callbacks. Leave disabled until read-only state monitoring has been validated."
+      "Description": "Enable native PMDG door control",
+      "Tooltip": "Master safety switch for PMDG 737 door/airstair writes. Leave OFF for read-only validation; the supplied Native and Ryanair Native profiles enable it explicitly."
     },
     {
       "Key": "PMDG.737.Native.Option.StateLogging",
       "Type": 1,
       "DefaultValue": true,
       "Description": "Log PMDG 737 state changes",
-      "Tooltip": "Logs model, power, APU, lights, parking brake and door annunciator changes for validation."
+      "Tooltip": "Logs model, power, APU, lights, parking brake and door state changes for diagnostics."
+    },
+    {
+      "Key": "PMDG.737.Native.Option.DoorAutomationEnabled",
+      "Type": 1,
+      "DefaultValue": true,
+      "Description": "Native door automation",
+      "Tooltip": "Allow Any2GSX door, loader, jetway and stair callbacks to target PMDG doors."
+    },
+    {
+      "Key": "PMDG.737.Native.Option.IntegratedAirstairAuto",
+      "Type": 1,
+      "DefaultValue": false,
+      "Description": "Use PMDG integrated front airstair",
+      "Tooltip": "Controls the PMDG 1L integrated airstair. The Ryanair Native profile enables this."
+    },
+    {
+      "Key": "PMDG.737.Native.Option.RearDoorAuto",
+      "Type": 1,
+      "DefaultValue": true,
+      "Description": "Open 2L for rear stairs",
+      "Tooltip": "Opens PMDG 2L when the GSX rear stair approaches or the passenger stair route is prepared."
+    },
+    {
+      "Key": "PMDG.737.Native.Option.JetwayAutoRetractAirstair",
+      "Type": 1,
+      "DefaultValue": true,
+      "Description": "Retract airstair for active jetway",
+      "Tooltip": "Safety rule: retract the PMDG integrated airstair before using 1L with an active jetway."
+    },
+    {
+      "Key": "PMDG.737.Native.Option.CargoDoorsAuto",
+      "Type": 1,
+      "DefaultValue": true,
+      "Description": "Native cargo door automation",
+      "Tooltip": "Synchronize forward and aft lower cargo doors with GSX loader/cargo handling."
+    },
+    {
+      "Key": "PMDG.737.Native.Option.PushbackCloseDoors",
+      "Type": 1,
+      "DefaultValue": true,
+      "Description": "Enforce closed doors at pushback",
+      "Tooltip": "Closes known passenger/service/cargo doors and retracts the integrated airstair at the Pushback phase boundary."
+    },
+    {
+      "Key": "PMDG.737.Native.Option.AlwaysStairsAtJetway",
+      "Type": 1,
+      "DefaultValue": false,
+      "Description": "Prefer stairs at jetway stands",
+      "Tooltip": "Airline/SOP option. The Ryanair Native profile enables this to prefer the PMDG front airstair plus GSX rear stairs even when a jetway is available."
+    },
+    {
+      "Key": "PMDG.737.Native.Option.DiagnosticsRearStair",
+      "Type": 1,
+      "DefaultValue": true,
+      "Description": "Rear stair diagnostics",
+      "Tooltip": "Logs rear-stair/2L synchronization and warns when GSX reports the rear stair in position while 2L is not open."
     }
   ],
-  "InstallUsageNotes": "FOUNDATION / VALIDATION BUILD.\\r\\nAdd [SDK] and EnableDataBroadcast=1 to 737NG3_Options.ini, then fully restart MSFS.\\r\\nExperimental aircraft writes are OFF by default and this manifest advertises no active door/equipment sync.\\r\\nUse this build first to validate ClientData and raw state logging.\\r\\nThe existing generic PMDG 737 profile is intentionally not modified.",
+  "HideGenericSettings": [
+    "Generic.Option.Aircraft.IsCargo",
+    "Generic.Option.Aircraft.GsxGpu",
+    "Generic.Var.PowerAvionic.Name",
+    "Generic.Var.PowerAvionic.Unit",
+    "Generic.Var.ExtAvail.Name",
+    "Generic.Var.ExtAvail.Unit",
+    "Generic.Var.LightNav.Name",
+    "Generic.Var.LightNav.Unit",
+    "Generic.Var.LightBeacon.Name",
+    "Generic.Var.LightBeacon.Unit",
+    "Generic.Var.ParkBrake.Name",
+    "Generic.Var.ParkBrake.Unit"
+  ],
+  "InstallUsageNotes": "BETA native PMDG 737 NG3 integration.\r\nAdd [SDK] and EnableDataBroadcast=1 to 737NG3_Options.ini and fully restart MSFS.\r\nThe plugin uses PMDG NG3 ClientData for aircraft state and PMDG custom events for target-safe door control.\r\nThe supplied default profile remains safe/read-only; import PMDG.737.Native or PMDG.738.Ryanair.Native to enable full automation.\r\nYour existing generic PMDG 737 and PMDG.738.RYR profiles are not modified.",
   "PluginDefaultProfile": {
     "PluginId": "PMDG.B737",
     "ChannelFileId": "PMDG.737",
-    "ProfileMatches": [
-      {
-        "MatchData": 4,
-        "MatchOperation": 3,
-        "MatchString": "PMDG 737"
-      }
-    ],
+    "ProfileMatches": [],
     "RunAutomationService": false,
     "RunAudioService": false,
     "PluginSettings": {
       "PMDG.737.Native.Option.EnableExperimentalWrites": false,
       "PMDG.737.Native.Option.StateLogging": true,
+      "PMDG.737.Native.Option.DoorAutomationEnabled": true,
+      "PMDG.737.Native.Option.IntegratedAirstairAuto": false,
+      "PMDG.737.Native.Option.RearDoorAuto": true,
+      "PMDG.737.Native.Option.JetwayAutoRetractAirstair": true,
+      "PMDG.737.Native.Option.CargoDoorsAuto": true,
+      "PMDG.737.Native.Option.PushbackCloseDoors": true,
+      "PMDG.737.Native.Option.AlwaysStairsAtJetway": false,
+      "PMDG.737.Native.Option.DiagnosticsRearStair": true,
       "Generic.Var.Engine1.Name": "ENG COMBUSTION:1",
       "Generic.Var.Engine1.Unit": "Bool",
       "Generic.Var.Engine2.Name": "ENG COMBUSTION:2",
       "Generic.Var.Engine2.Unit": "Bool",
-      "Generic.Var.PowerAvionic.Name": "L:BatteryFreq",
-      "Generic.Var.PowerAvionic.Unit": "Bool",
-      "Generic.Var.ExtAvail.Name": "L:7X7X_Ground_Power_Light_NotInUse",
-      "Generic.Var.ExtAvail.Unit": "Bool",
       "Generic.Var.ExtConn.Name": "L:7X7X_Ground_Power_Light_Connected",
       "Generic.Var.ExtConn.Unit": "Bool",
       "Generic.Var.ApuRunning.Name": "L:APU",
       "Generic.Var.ApuRunning.Unit": "Bool",
       "Generic.Var.ApuBleedOn.Name": "L:APUBleed_InUse",
       "Generic.Var.ApuBleedOn.Unit": "Bool",
-      "Generic.Var.LightNav.Name": "LIGHT NAV",
-      "Generic.Var.LightNav.Unit": "Bool",
-      "Generic.Var.LightBeacon.Name": "LIGHT BEACON",
-      "Generic.Var.LightBeacon.Unit": "Bool",
-      "Generic.Var.ParkBrake.Name": "BRAKE PARKING POSITION",
-      "Generic.Var.ParkBrake.Unit": "Bool",
       "Generic.Option.Aircraft.RefuelStair": false,
       "Generic.Option.Aircraft.GsxProgFuel": false
     }
