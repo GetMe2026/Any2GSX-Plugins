@@ -120,12 +120,12 @@ namespace Pmdg737Interface
             return await base.GetExternalPowerAvailable();
         }
 
-        public override async Task<bool> GetExternalPowerConnected()
+        public override Task<bool> GetExternalPowerConnected()
         {
-            if (IsConnected)
-                return Data.ELEC_GrdPwrSw != 0;
-
-            return await base.GetExternalPowerConnected();
+            // ELEC_GrdPwrSw is the physical/momentary switch input, not a proven
+            // "external power connected" state. Until runtime validation identifies
+            // a reliable native source, retain the existing generic PMDG fallback.
+            return base.GetExternalPowerConnected();
         }
 
         public override async Task<bool> GetApuBleedOn()
