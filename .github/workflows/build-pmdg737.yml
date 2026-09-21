@@ -91,9 +91,6 @@ jobs:
 
           $xml | Set-Content -Path $config -Encoding utf8
 
-          Write-Host "NuGet configuration:"
-          Get-Content $config
-
       - name: Build local CFIT NuGet feed
         shell: pwsh
         run: |
@@ -104,32 +101,18 @@ jobs:
           $config = Join-Path $env:GITHUB_WORKSPACE '_deps\NuGet.config'
 
           $packages = @(
-            @{
-              Project = 'AppLogger\AppLogger.csproj'
-              Version = '2026.255.17.3105'
-            },
-            @{
-              Project = 'AppTools\AppTools.csproj'
-              Version = '2026.255.17.3122'
-            },
-            @{
-              Project = 'SimConnectLib\SimConnectLib.csproj'
-              Version = '2026.255.17.3143'
-            },
-            @{
-              Project = 'AppFramework\AppFramework.csproj'
-              Version = '2026.255.17.3154'
-            }
+            @{ Project = 'AppLogger\AppLogger.csproj'; Version = '2026.255.17.3105' },
+            @{ Project = 'AppTools\AppTools.csproj'; Version = '2026.255.17.3122' },
+            @{ Project = 'SimConnectLib\SimConnectLib.csproj'; Version = '2026.255.17.3143' },
+            @{ Project = 'AppFramework\AppFramework.csproj'; Version = '2026.255.17.3154' }
           )
 
           foreach ($package in $packages) {
             $project = Join-Path $root $package.Project
 
-            Write-Host "Restoring $($package.Project)"
             dotnet restore "$project" --configfile "$config"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-            Write-Host "Packing $($package.Project) as $($package.Version)"
             dotnet pack "$project" `
               --configuration Release `
               --no-restore `
@@ -138,9 +121,6 @@ jobs:
 
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
-
-          Write-Host 'Local CFIT packages:'
-          Get-ChildItem $feed | Select-Object Name
 
       - name: Restore PMDG 737 plugin
         shell: pwsh
@@ -163,12 +143,31 @@ jobs:
 
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Create installable beta package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $output = Join-Path $env:GITHUB_WORKSPACE 'Pmdg737Interface\bin\Release\net10.0-windows10.0.17763.0\win-x64'
+          $stage = Join-Path $env:GITHUB_WORKSPACE '_package\PMDG.B737'
+          $zip = Join-Path $env:GITHUB_WORKSPACE '_package\PMDG.B737-v0.2.0-beta.zip'
+
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+
+          Copy-Item (Join-Path $output 'Pmdg737Interface.dll') (Join-Path $stage 'Pmdg737Interface.dll')
+          Copy-Item 'Pmdg737Interface\manifest.json' (Join-Path $stage 'manifest.json')
+          Copy-Item 'Pmdg737Interface\Channel\PMDG.737.json' (Join-Path $stage 'PMDG.737.json')
+
+          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip -Force
+
       - name: Upload validation build
         uses: actions/upload-artifact@v4
         with:
-          name: PMDG-B737-native-foundation
+          name: PMDG-B737-native-v0.2.0-beta
           if-no-files-found: error
           path: |
-            Pmdg737Interface/bin/Release/net10.0-windows10.0.17763.0/win-x64/Pmdg737Interface.dll
-            Pmdg737Interface/bin/Release/net10.0-windows10.0.17763.0/win-x64/manifest.json
-            Pmdg737Interface/Channel/PMDG.737.json
+            _package/PMDG.B737-v0.2.0-beta.zip
+            Pmdg737Interface/Profiles/PMDG.737.Native-Profile-IMPORT.json
+            Pmdg737Interface/Profiles/PMDG.738.Ryanair.Native-Profile-IMPORT.json
+            Pmdg737Interface/README_TESTING.md
+            Pmdg737Interface/VALIDATION.txt
