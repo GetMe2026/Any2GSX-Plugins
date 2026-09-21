@@ -76,8 +76,18 @@ namespace Pmdg737Interface
             }
         }
 
-        public virtual bool IsMoving => HasProgressVariable &&
-            Progress > ClosedThreshold && Progress < OpenThreshold;
+        public virtual bool IsMoving
+        {
+            get
+            {
+                if (!HasProgressVariable)
+                    return false;
+
+                double progress = Progress;
+                return (progress > ClosedThreshold && progress < OpenThreshold)
+                    || (progress <= ClosedThreshold && IsOpenIndicated);
+            }
+        }
 
         public virtual bool IsMostlyOpen
         {
@@ -86,9 +96,7 @@ namespace Pmdg737Interface
                 if (!HasProgressVariable)
                     return IsOpenIndicated;
 
-                double progress = Progress;
-                return progress >= OpenThreshold
-                    || (progress <= ClosedThreshold && IsOpenIndicated);
+                return Progress >= OpenThreshold;
             }
         }
 
@@ -135,7 +143,10 @@ namespace Pmdg737Interface
 
                 await SendDoorCode();
 
-                bool reached = await WaitForTarget(targetOpen, Id == Pmdg737DoorId.Airstair ? 14000 : 10000);
+                bool reached = await WaitForTarget(
+                    targetOpen,
+                    Id == Pmdg737DoorId.Airstair ? 14000 : 10000);
+
                 if (!reached)
                 {
                     Logger.Warning(
@@ -159,14 +170,19 @@ namespace Pmdg737Interface
         protected virtual async Task WaitForSettled(int timeoutMs)
         {
             int elapsed = 0;
-            while (IsMoving && elapsed < timeoutMs && !Aircraft.Token.IsCancellationRequested)
+
+            while (IsMoving
+                && elapsed < timeoutMs
+                && !Aircraft.Token.IsCancellationRequested)
             {
                 await Task.Delay(150, Aircraft.Token);
                 elapsed += 150;
             }
         }
 
-        protected virtual async Task<bool> WaitForTarget(bool targetOpen, int timeoutMs)
+        protected virtual async Task<bool> WaitForTarget(
+            bool targetOpen,
+            int timeoutMs)
         {
             int elapsed = 0;
 
@@ -174,7 +190,8 @@ namespace Pmdg737Interface
             await Task.Delay(200, Aircraft.Token);
             elapsed += 200;
 
-            while (elapsed < timeoutMs && !Aircraft.Token.IsCancellationRequested)
+            while (elapsed < timeoutMs
+                && !Aircraft.Token.IsCancellationRequested)
             {
                 if (TargetReached(targetOpen))
                     return true;
@@ -188,8 +205,11 @@ namespace Pmdg737Interface
 
         public virtual Task Toggle()
         {
-            if (!Aircraft.ExperimentalWritesEnabled || !Aircraft.DoorAutomationEnabled)
+            if (!Aircraft.ExperimentalWritesEnabled
+                || !Aircraft.DoorAutomationEnabled)
+            {
                 return Task.CompletedTask;
+            }
 
             return SendDoorCode();
         }
