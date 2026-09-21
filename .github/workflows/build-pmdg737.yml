@@ -1,0 +1,46 @@
+name: Build PMDG 737 native plugin
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/pmdg737-native-plugin
+    paths:
+      - 'Pmdg737Interface/**'
+      - '.github/workflows/build-pmdg737.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore PMDG 737 plugin
+        run: dotnet restore Pmdg737Interface/Pmdg737Interface.csproj
+
+      - name: Build PMDG 737 plugin
+        run: >
+          dotnet build Pmdg737Interface/Pmdg737Interface.csproj
+          --configuration Release
+          --no-restore
+          -p:SkipPluginPackaging=true
+
+      - name: Upload validation build
+        uses: actions/upload-artifact@v4
+        with:
+          name: PMDG-B737-native-foundation
+          if-no-files-found: error
+          path: |
+            Pmdg737Interface/bin/Release/net10.0-windows10.0.17763.0/win-x64/Pmdg737Interface.dll
+            Pmdg737Interface/bin/Release/net10.0-windows10.0.17763.0/win-x64/manifest.json
+            Pmdg737Interface/Channel/PMDG.737.json
